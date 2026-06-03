@@ -15,6 +15,31 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/util.h>
 
+#include <zephyr/bluetooth/hci.h>
+
+static void dump_le_features(void)
+{
+	struct net_buf *rsp;
+	struct bt_hci_rp_le_read_local_features *rp;
+	int err;
+
+	err = bt_hci_cmd_send_sync(BT_HCI_OP_LE_READ_LOCAL_FEATURES, NULL, &rsp);
+	if (err) {
+		printk("LE Read Local Features failed: %d\n", err);
+		return;
+	}
+
+	rp = (void *)rsp->data;
+
+	printk("LE features:");
+	for (int i = 0; i < sizeof(rp->features); i++) {
+		printk(" %02x", rp->features[i]);
+	}
+	printk("\n");
+
+	net_buf_unref(rsp);
+}
+
 /* Length of CTE in unit of 8[us] */
 #define CTE_LEN (0x14U)
 /* Number of CTE send in single periodic advertising train */
@@ -90,6 +115,8 @@ int main(void)
 		return 0;
 	}
 	printk("success\n");
+
+	dump_le_features();
 
 	printk("Advertising set create...");
 	err = bt_le_ext_adv_create(&param, &adv_callbacks, &adv_set);
